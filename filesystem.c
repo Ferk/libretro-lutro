@@ -3,6 +3,7 @@
 #include <compat/strl.h>
 #include <file/file_path.h>
 #include <streams/file_stream.h>
+#include <lists/dir_list.h>
 
 #if WANT_PHYSFS
 #include "physfs.h"
@@ -10,6 +11,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+
+
+
 
 int lutro_filesystem_preload(lua_State *L)
 {
@@ -25,6 +30,7 @@ int lutro_filesystem_preload(lua_State *L)
       { "isDirectory", fs_isDirectory },
       { "isFile",      fs_isFile },
       { "createDirectory", fs_createDirectory },
+      { "getDirectoryItems", fs_getDirectoryItems },
       {NULL, NULL}
    };
 
@@ -268,5 +274,29 @@ int fs_createDirectory(lua_State *L)
    res = path_mkdir(fullpath);
 
    lua_pushboolean(L, res);
+   return 1;
+}
+
+int fs_getDirectoryItems(lua_State *L)
+{
+   const char *path = luaL_checkstring(L, 1);
+
+   char fullpath[PATH_MAX_LENGTH];
+   strlcpy(fullpath, settings.gamedir, sizeof(fullpath));
+   strlcat(fullpath, path, sizeof(fullpath));
+
+   struct string_list *list;
+
+   list = dir_list_new(fullpath, NULL, true, NULL, NULL, NULL);
+   if(list == NULL) {
+     return -1;
+   }
+
+   lua_newtable(L);
+   for (int i = 0; i < list->size; i++) {
+     lua_pushnumber(L, 1+i);
+     lua_pushstring(L, list->elems[i].data+strlen(fullpath));
+     lua_settable(L, -3);
+   }
    return 1;
 }
