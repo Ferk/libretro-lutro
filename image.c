@@ -15,6 +15,7 @@ static int l_getWidth(lua_State *L);
 static int l_getHeight(lua_State *L);
 static int l_getPixel(lua_State *L);
 static int l_setPixel(lua_State *L);
+static int l_mapPixel(lua_State *L);
 static int l_getDimensions(lua_State *L);
 static int l_type(lua_State *L);
 static int l_gc(lua_State *L);
@@ -52,6 +53,7 @@ void *image_data_create(lua_State *L, bitmap_t* self)
          { "getHeight",  l_getHeight },
          { "getPixel",   l_getPixel },
          { "setPixel",   l_setPixel },
+         { "mapPixel",   l_mapPixel },
          { "type",       l_type },
          { "__gc",       l_gc },
          {NULL, NULL}
@@ -187,6 +189,48 @@ static int l_setPixel(lua_State *L)
 
    self->data[y * (self->pitch >> 2) + x] = (c.a<<24) | (c.r<<16) | (c.g<<8) | c.b;
 
+   return 0;
+}
+
+static int l_mapPixel(lua_State *L)
+{
+  int n = lua_gettop(L);
+  if(n != 2) {
+     return luaL_error(L, "lutro.image.newImageData requires 2 arguments, %d given.", n);
+  }
+
+  bitmap_t* self = (bitmap_t*)luaL_checkudata(L, 1, "ImageData");
+  if(!lua_isfunction (L, 2)) {
+     return luaL_error(L, "ImageData:mapPixel requires a function as argument, %d given.", lua_typename(L, -1));
+  }
+
+   uint32_t* data = self->data;
+   for(int x=0; x<self->width; x++)
+      for(int y=0; y<self->height; y++) {
+        int ndx = y * (self->pitch >> 2) + x;
+        uint32_t color = data[ndx];
+        int a = ((color & 0xff000000)>>24);
+        int r = ((color & 0xff0000)>>16);
+        int g = ((color & 0xff00)>>8);
+        int b = (color & 0xff);
+        lua_pushvalue(L, 2);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        lua_pushnumber(L, r);
+        lua_pushnumber(L, g);
+        lua_pushnumber(L, b);
+        lua_pushnumber(L, a);
+        lua_call(L,6,4);
+        r = lua_tointeger(L, 4);
+        g = lua_tointeger(L, 5);
+        b = lua_tointeger(L, 6);
+        if(lua_isnone(L,7))
+          a = 255;
+        else
+          a = lua_tointeger(L, 7);
+        lua_settop(L, 2);
+        data[ndx] = (a<<24) | (r<<16) | (g<<8) | b;
+      }
    return 0;
 }
 

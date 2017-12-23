@@ -24,6 +24,8 @@ static void set_ref(lua_State *L, int *ref)
 static int canvas_type(lua_State *L);
 static int canvas_gc(lua_State *L);
 
+static int canvas_newImageData(lua_State *L);
+
 static int canvas_setFilter(lua_State *L)
 {
    return 0;
@@ -39,6 +41,7 @@ static gfx_Canvas *new_canvas(lua_State *L)
       static luaL_Reg canvas_funcs[] = {
          { "type",      canvas_type },
          { "setFilter", canvas_setFilter },
+         { "newImageData", canvas_newImageData },
          { "__gc",      canvas_gc },
          {NULL, NULL}
       };
@@ -317,11 +320,28 @@ static int canvas_gc(lua_State *L)
    return 0;
 }
 
+static int canvas_newImageData(lua_State *L)
+{
+   int n = lua_gettop(L);
+
+   // TODO: Support Canvas:newImageData( x, y, width, height )
+   if (n != 1)
+      return luaL_error(L, "Canvas.newImageData requires 1 argument, %d given.", n);
+
+   gfx_Canvas* self = get_canvas_ndx(L, -1);
+
+   bitmap_t* bmp = self->target;
+
+   image_data_create(L, bmp);
+
+   return 1;
+}
+
 static int gfx_newCanvas(lua_State *L)
 {
    int n = lua_gettop(L);
 
-   if (n != 2)
+   if (n < 2)
       return luaL_error(L, "lutro.graphics.newCanvas requires 2 arguments, %d given.", n);
 
    int w = luaL_checknumber(L, 1);
@@ -376,6 +396,30 @@ static int gfx_getCanvas(lua_State *L)
    get_canvas_ref(L, cur_canv);
 
    return 1;
+}
+
+static int gfx_getCanvasFormats(lua_State *L)
+{
+   lua_newtable(L);
+  //for (int i = 0; i < list->size; i++) {
+    lua_pushstring(L, "normal");
+    lua_pushboolean(L, 1);
+    lua_settable(L, -3);
+  //}
+   return 1;
+}
+
+static int gfx_getRendererInfo(lua_State *L)
+{
+   // device: The name of the graphics card, e.g. "Intel HD Graphics 3000 OpenGL Engine"
+   lua_pushstring(L, "device");
+   // vendor: The name of the graphics card vendor, e.g. "Intel Inc".
+   lua_pushstring(L, "vendor");
+   // version: The version of the renderer with some extra driver-dependent version info, e.g. "2.1 INTEL-8.10.44".
+   lua_pushstring(L, "version");
+   // name: The name of the renderer, e.g. "OpenGL" or "OpenGL ES".
+   lua_pushstring(L, "name");
+   return 4;
 }
 
 static int font_type(lua_State *L)
@@ -622,7 +666,9 @@ static int gfx_clear(lua_State *L)
    int n = lua_gettop(L);
    gfx_Canvas *canvas;
 
-   if (n != 0)
+   if ( n == 4)
+      ;// TODO: set color
+   else if (n != 0)
       return luaL_error(L, "lutro.graphics.clear requires 0 arguments, %d given.", n);
 
    canvas = get_canvas_ref(L, cur_canv);
@@ -1159,6 +1205,8 @@ int lutro_graphics_preload(lua_State *L)
       { "getHeight",    gfx_getHeight },
       { "getWidth",     gfx_getWidth },
       { "getCanvas",    gfx_getCanvas },
+      { "getCanvasFormats", gfx_getCanvasFormats },
+      { "getRendererInfo", gfx_getRendererInfo },
       { "line",         gfx_line },
       { "newImage",     gfx_newImage },
       { "newImageFont", gfx_newImageFont },

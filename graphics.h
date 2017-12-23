@@ -5,6 +5,7 @@
 #include "runtime.h"
 #include "formats/rpng.h"
 #include "painter.h"
+#include "image.h"
 
 typedef struct
 {
