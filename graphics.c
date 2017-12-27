@@ -884,17 +884,19 @@ static int gfx_line(lua_State *L)
    int n = lua_gettop(L);
    gfx_Canvas *canvas;
 
-   if (n != 4)
-      return luaL_error(L, "lutro.graphics.line requires 4 arguments, %d given.", n);
+   if (n < 4 || n % 2 != 0)
+      return luaL_error(L, "lutro.graphics.line requires an even number of arguments that's 4 or greater, %d given.", n);
 
    int x1 = luaL_checknumber(L, 1);
    int y1 = luaL_checknumber(L, 2);
-   int x2 = luaL_checknumber(L, 3);
-   int y2 = luaL_checknumber(L, 4);
-
    canvas = get_canvas_ref(L, cur_canv);
-
-   pntr_strike_line(canvas, x1, y1, x2, y2);
+   for(int i=2; i < n; i+=2) {
+     int x2 = luaL_checknumber(L, i+1);
+     int y2 = luaL_checknumber(L, i+2);
+     pntr_strike_line(canvas, x1, y1, x2, y2);
+     x1=x2;
+     y1=y2;
+   }
 
    return 0;
 }
